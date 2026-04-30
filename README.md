@@ -2,7 +2,6 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/ShennBoku/kyofive-tools/blob/main/LICENSE)
 [![Discord](https://img.shields.io/discord/1356249888802734132?label=Discord&logo=discord&color=7289DA)](https://discord.gg/XGaNQZ8R2e)
-[![Framework](https://img.shields.io/badge/Framework-ESX%20Legacy%201.13.3-red.svg)](https://github.com/esx-framework/esx_core/releases/tag/1.13.3)
 [![Support Me on Saweria](https://img.shields.io/badge/Support_Me-Saweria-yellow?logo=buymeacoffee)](https://saweria.co/ShennBoku)
 
 A lightweight, efficient tool designed for FiveM players and developers to manage server caches and switch profiles instantly.

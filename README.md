@@ -19,11 +19,17 @@ A lightweight, efficient tool designed for FiveM players and developers to manag
 
 KyoFive Tools comes with several key features that make managing your FiveM data easier:
 
-- 🔍 **Smart Search**: Search for specific server data by simply entering *Server Code*.
-- 🔄 **Profile Switching**: Instantly swap cache folders between servers without re-downloading assets (GB).
-- 📡 **Local Detection**: Auto detect local server (localhost:30120) for *development* purposes.
+- 🌐 **Cache Manager**:
+   - **Smart Search**: Search for specific server data by simply entering *Server Code*.
+   - **Profile Switching**: Instantly swap cache folders between servers without re-downloading assets (GB).
+   - **Local Detection**: Auto detect local server (localhost:30120) for *development* purposes.
+   - **Real-time Stats**: Calculate cache folder size (GB/MB) directly in UI.
+- ⌨️ **Keyboard Clicker (Auto Keyboard Spammer)**:
+   - **Hold-Time Logic (30ms)**: Optimized keystroke simulation specifically for the FiveM engine to avoid missing inputs.
+   - **Always-on-Top Status**: Floating window (Status Indicator) with *Glassmorphism* effect to monitor Running/Standby status while in game.
+   - **Smart Recording**: Instant hotkey recording feature for *Trigger* and *Target Key* without the need for manual typing.
+   - **Conflict Prevention**: Prevent the use of the same key between trigger and spam target to avoid *loop error*.
 - 📦 **Hybrid Storage**: Using the organized `kyofive-storage` folder system.
-- 📊 **Real-time Stats**: Calculate cache folder size (GB/MB) directly in UI.
 
 ---
 

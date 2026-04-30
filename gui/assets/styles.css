@@ -119,3 +119,10 @@ body {
 .swal2-timer-progress-bar {
     background: #0078d4 !important;
 }
+
+#triggerHotkey, #spamKey {
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-size: 14px;
+    cursor: default;
+}

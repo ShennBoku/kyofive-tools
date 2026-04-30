@@ -1,0 +1,165 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0">Keyboard Clicker</h2>
+    <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" role="switch" id="enableClicker" style="width: 2.5em; height: 1.25em; cursor: pointer;">
+        <label class="form-check-label text-secondary small ms-2" for="enableClicker">ENABLE CLICKER</label>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-7">
+        <div class="card border-secondary shadow-sm" style="background-color: var(--bs-tertiary-bg); border-radius: 12px;">
+            <div class="card-body p-4">
+                <h6 class="card-subtitle mb-4 text-secondary fw-normal text-uppercase small" style="letter-spacing: 1px;">
+                    <i class="fa-solid fa-gear me-2"></i>Configuration
+                </h6>
+
+                <!-- TRIGGER HOTKEY -->
+                <div class="mb-4">
+                    <label class="form-label text-white-50 small fw-bold">TRIGGER ON/OFF</label>
+                    <div class="input-group border border-secondary border-opacity-25 rounded-pill overflow-hidden bg-dark bg-opacity-50 px-2">
+                        <span class="input-group-text bg-transparent border-0 text-secondary"><i class="fa-solid fa-toggle-on"></i></span>
+                        <input type="text" id="triggerHotkey" class="form-control bg-transparent border-0 text-white shadow-none small" placeholder="Press record..." readonly style="text-transform: uppercase;">
+                        <button class="btn btn-primary btn-sm rounded-pill my-1 px-3 fw-bold" id="recordTrigger" style="font-size: 11px;">RECORD</button>
+                    </div>
+                </div>
+
+                <!-- SPAM KEY -->
+                <div class="mb-4">
+                    <label class="form-label text-white-50 small fw-bold">KEY TO SPAM</label>
+                    <div class="input-group border border-secondary border-opacity-25 rounded-pill overflow-hidden bg-dark bg-opacity-50 px-2">
+                        <span class="input-group-text bg-transparent border-0 text-secondary"><i class="fa-solid fa-keyboard"></i></span>
+                        <input type="text" id="spamKey" class="form-control bg-transparent border-0 text-white shadow-none small" placeholder="Press record..." readonly style="text-transform: uppercase;">
+                        <button class="btn btn-primary btn-sm rounded-pill my-1 px-3 fw-bold" id="recordSpam" style="font-size: 11px;">RECORD</button>
+                    </div>
+                </div>
+
+                <!-- DELAY SETTING -->
+                <div class="mb-2">
+                    <label class="form-label text-white-50 small fw-bold">INTERVAL DELAY (MS)</label>
+                    <div class="input-group border border-secondary border-opacity-25 rounded-pill overflow-hidden bg-dark bg-opacity-50 px-2">
+                        <span class="input-group-text bg-transparent border-0 text-secondary"><i class="fa-solid fa-stopwatch"></i></span>
+                        <input type="number" id="clickDelay" class="form-control bg-transparent border-0 text-white shadow-none small" value="100" min="10">
+                        <span class="input-group-text bg-transparent border-0 text-secondary small">ms</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- INFO CARD -->
+    <div class="col-md-5">
+        <div class="card border-secondary shadow-sm h-100" style="background-color: var(--bs-tertiary-bg); border-radius: 12px;">
+            <div class="card-body p-4 d-flex flex-column justify-content-center text-center">
+                <div id="statusIndicator" class="mb-3">
+                    <i class="fa-solid fa-circle-dot text-danger fs-1 opacity-25"></i>
+                </div>
+                <h5 class="text-white fw-bold mb-1">Clicker Inactive</h5>
+                <p class="text-secondary small">Toggle "Enable Clicker" above to start the service.</p>
+                <div class="mt-3 p-3 bg-dark bg-opacity-25 rounded-3 border border-secondary border-opacity-10">
+                    <small class="text-white-50 d-block mb-1 italic" style="font-size: 11px;">Quick Tips:</small>
+                    <small class="text-secondary" style="font-size: 10px;">Gunakan delay di atas 50ms untuk menghindari kick dari server FiveM karena spam terlalu cepat.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    $(document).ready(function() {
+        function loadClickerHistory() {
+            if (!window.pywebview || !window.pywebview.api) {
+                setTimeout(loadClickerHistory, 100);
+                return;
+            }
+
+            pywebview.api.get_kclicker_history().then(config => {
+                if (config) {
+                    if (config.trigger) $('#triggerHotkey').val(config.trigger.toUpperCase());
+                    if (config.spam) $('#spamKey').val(config.spam.toUpperCase());
+                    $('#clickDelay').val(config.delay || 100);
+                    console.log("History Clicker loaded:", config);
+                }
+            }).catch(err => {
+                console.error("Gagal memuat history:", err);
+            });
+        }
+
+        loadClickerHistory();
+    });
+
+    // Fungsi untuk merekam hotkey
+    function startRecording(inputId) {
+        const input = $(`#${inputId}`);
+        const btn = input.closest('.input-group').find('button');
+        const otherInputId = (inputId === 'triggerHotkey') ? 'spamKey' : 'triggerHotkey';
+        const otherValue = $(`#${otherInputId}`).val().toUpperCase();
+
+        // Visual Feedback
+        btn.text('LISTENING...').removeClass('btn-primary').addClass('btn-warning');
+        input.val('Press any key...').addClass('text-warning');
+
+        pywebview.api.get_pressed_key_kclicker().then(key => {
+            // 1. Auto Uppercase
+            let formattedKey = key.toUpperCase();
+
+            // 2. Validasi: Tidak boleh sama dengan input satunya
+            if (formattedKey === otherValue) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Duplicate Key!',
+                    text: 'Trigger dan Key to Spam tidak boleh menggunakan tombol yang sama.',
+                    background: '#1a1a1a',
+                    color: '#ffffff',
+                    confirmButtonColor: '#0078D4'
+                });
+                input.val(input.data('prev') || '').removeClass('text-warning'); // Balik ke key sebelumnya
+            } else {
+                // Berhasil: Simpan key baru
+                input.val(formattedKey).removeClass('text-warning');
+                input.data('prev', formattedKey); // Simpan untuk backup jika nanti error
+            }
+
+            btn.text('RECORD').removeClass('btn-warning').addClass('btn-primary');
+            syncClickerSettings();
+        });
+    }
+
+    // Event Klik Tombol Record
+    $('#recordTrigger').on('click', function() { startRecording('triggerHotkey'); });
+    $('#recordSpam').on('click', function() { startRecording('spamKey'); });
+
+    function syncClickerSettings() {
+        const data = {
+            enabled: $('#enableClicker').is(':checked'),
+            trigger: $('#triggerHotkey').val(),
+            spam: $('#spamKey').val(),
+            delay: $('#clickDelay').val()
+        };
+
+        if(data.enabled) {
+            $('#statusIndicator i').removeClass('text-danger opacity-25').addClass('text-success fa-beat');
+            $('#statusTitle').text('Service Ready').addClass('text-success');
+            $('#statusDesc').text('Clicker is active. Use your hotkey in-game.');
+        } else {
+            $('#statusIndicator i').addClass('text-danger opacity-25').removeClass('text-success fa-beat');
+            $('#statusTitle').text('Clicker Inactive').removeClass('text-success');
+            $('#statusDesc').text('Toggle "Enable Clicker" above to start the service.');
+        }
+        
+        pywebview.api.update_kclicker_conf(data).then(res => {
+            console.log("Settings Synced");
+        });
+    }
+
+    function forceDisableClicker() {
+        $('#enableClicker').prop('checked', false);
+        
+        $('#statusIndicator i').addClass('text-danger opacity-25').removeClass('text-success fa-beat');
+        $('#statusTitle').text('Clicker Inactive').removeClass('text-success');
+        $('#statusDesc').text('Toggle "Enable Clicker" above to start the service.');
+        
+        console.log("Clicker disabled because status window was closed.");
+    }
+
+    $('#enableClicker, #clickDelay').on('change', syncClickerSettings);
+</script>

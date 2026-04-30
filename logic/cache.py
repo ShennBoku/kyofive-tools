@@ -1,34 +1,19 @@
 import os, re, json, shutil, requests
 from datetime import datetime
+from logic.database import DatabaseManager
 
 class CacheManager:
     def __init__(self):
-        self.appdata = os.getenv('LOCALAPPDATA')
-        self.fivem_data = os.path.join(self.appdata, "FiveM", "FiveM.app", "data")
-        self.active_cache = os.path.join(self.fivem_data, "server-cache-priv")
-        self.storage_dir = os.path.join(self.fivem_data, "kyofive-storage")
-        self.db_file = os.path.join(self.storage_dir, "cached.json")
+        self.db = DatabaseManager()
 
-        if not os.path.exists(self.storage_dir):
-            os.makedirs(self.storage_dir)
-        if not os.path.exists(self.db_file):
-            self.save_db({"active_profile": None, "servers": {}})
+        self.fivem_data = os.path.join(self.db.appdata, "FiveM", "FiveM.app", "data")
+        self.active_cache = os.path.join(self.fivem_data, "server-cache-priv")
+        self.storage_dir = self.db.storage_dir
 
 
     # --- DATABASE ---
-    def load_db(self):
-        try:
-            with open(self.db_file, "r") as f:
-                return json.load(f)
-        except:
-            return {"active_profile": None, "servers": {}}
-
-    def save_db(self, data):
-        with open(self.db_file, "w") as f:
-            json.dump(data, f, indent=4)
-
     def update_server_data(self, name, code, ip, max_clients, build):
-        db = self.load_db()
+        db = self.db.get_cached()
         db["servers"][code] = {
             "name": name,
             "ip": ip,
@@ -37,10 +22,10 @@ class CacheManager:
             "lastConnect": datetime.now().strftime("%Y-%m-%d %H:%M")
         }
         db["active_profile"] = code
-        self.save_db(db)
+        self.db.save_cached(db)
 
     def switch_profile(self, name, code, ip, max_clients, build="1604"):
-        db = self.load_db()
+        db = self.db.get_cached()
         current_active = db.get("active_profile")
 
         if current_active is None:
@@ -52,7 +37,7 @@ class CacheManager:
                 "gameBuild": build,
                 "lastConnect": datetime.now().strftime("%Y-%m-%d %H:%M")
             }
-            self.save_db(db)            
+            self.db.save_cached(db)            
             return True, f"First profile set: {name}"
 
         if current_active == code:
@@ -79,7 +64,7 @@ class CacheManager:
                     "gameBuild": build,
                     "lastConnect": datetime.now().strftime("%Y-%m-%d %H:%M")
                 }
-            self.save_db(db)
+            self.db.save_cached(db)
 
             return True, f"Switched to {name} (Build {build})"
         except Exception as e:
@@ -96,7 +81,7 @@ class CacheManager:
             return False
 
     def get_folder_size(self, code):
-        db = self.load_db()
+        db = self.db.get_cached()
         if db.get("active_profile") == code:
             path = self.active_cache
         else:
@@ -124,9 +109,9 @@ class CacheManager:
                 max_clients = data.get('vars', {}).get('sv_maxClients', '48')
                 gameBuild = data.get('vars', {}).get('sv_enforceGameBuild', '1604')
 
-                db = self.load_db()
+                db = self.db.get_cached()
                 db["local_settings"] = { "name": clean_name, "gameBuild": gameBuild, "ip": "127.0.0.1:30120" }
-                self.save_db(db)
+                self.db.save_cached(db)
 
                 return {
                     "active": True,
@@ -158,7 +143,7 @@ class CacheManager:
 
     # --- ACTION ---
     def get_library_data(self):
-        db = self.load_db()
+        db = self.db.get_cached()
         library = []
         is_running = self.is_fivem_running()
 
@@ -182,7 +167,7 @@ class CacheManager:
         if self.is_fivem_running():
             return {"status": "error", "message": "FiveM is still open! Close the game first."}
 
-        db = self.load_db()
+        db = self.db.get_cached()
         if db.get("active_profile") == code:
             path = self.active_cache
         else:
@@ -204,7 +189,7 @@ class CacheManager:
         if self.is_fivem_running():
             return {"status": "error", "message": "FiveM is still open! Close the game first."}
         
-        db = self.load_db()
+        db = self.db.get_cached()
         if db.get("active_profile") == code:
             return {"status": "error", "message": "Cannot delete active server."}
         
@@ -215,7 +200,7 @@ class CacheManager:
 
                 if code in db["servers"]:
                     del db["servers"][code]
-                    self.save_db(db)
+                    self.db.save_cached(db)
 
                 return {"status": "success", "message": f"The {code} cache was successfully removed from the library."}
             else:

@@ -1,0 +1,121 @@
+body {
+    background-color: var(--bs-body-bg); 
+    color: var(--bs-body-color);
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+}
+
+.sidebar {
+    width: 220px;
+    background-color: var(--bs-tertiary-bg);
+    padding: 20px;
+    border-right: 1px solid var(--bs-border-color);
+}
+
+.main-container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.header {
+    height: 60px;
+    padding: 10px 30px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.content-area {
+    flex-grow: 1;
+    padding: 30px;
+    overflow-y: auto;
+}
+
+.nav-btn {
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    color: var(--bs-secondary-color);
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 5px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+}
+
+.nav-btn i {
+    width: 20px;
+    margin-right: 10px;
+}
+
+.nav-btn:hover {
+    background-color: var(--bs-secondary-bg);
+    color: var(--bs-emphasis-color);
+}
+
+.nav-btn.active {
+    background-color: var(--bs-primary-bg-subtle);
+    color: var(--bs-primary-text-emphasis);
+    font-weight: bold;
+}
+
+.copyright {
+    position: absolute;
+    bottom: 20px;
+    font-size: 10px;
+    color: var(--bs-secondary-color);
+}
+
+.card {
+    background-color: var(--bs-tertiary-bg);
+    border-radius: 15px;
+}
+
+.swal2-popup {
+    background-color: #1a1a1a !important;
+    border: 1px solid #333 !important;
+    border-radius: 12px !important;
+    padding: 1rem !important;
+}
+
+.swal2-title {
+    color: #ffffff !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.5px;
+}
+
+.swal2-html-container {
+    color: #888888 !important;
+    font-size: 13px !important;
+}
+
+.swal2-icon.swal2-warning {
+    border-color: #f8bb86 !important;
+    color: #f8bb86 !important;
+    transform: scale(0.7);
+}
+
+.swal2-actions {
+    gap: 10px;
+}
+
+.swal2-confirm, .swal2-cancel {
+    width: 120px !important;
+    margin: 5px !important;
+    font-size: 14px !important;
+    justify-content: center !important;
+}
+.swal2-toast {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important;
+    background-color: #252526 !important;
+}
+
+.swal2-timer-progress-bar {
+    background: #0078d4 !important;
+}

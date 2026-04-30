@@ -43,7 +43,7 @@ class KyoApi:
             build = serv['build']
             max_clients = serv['clients']
         else:
-            db = self.cache_mgr.load_db()
+            db = self.db.get_cached()
             code = serv['code']
             sInfo = db["servers"].get(serv['code'])
             ip = sInfo['ip']

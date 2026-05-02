@@ -1,0 +1,135 @@
+<div class="container-fluid p-0 animate-fade-in">
+    <div class="d-flex align-items-center mb-4">
+        <div class="bg-primary rounded-3 p-2 me-3 shadow-sm">
+            <i class="fas fa-folder-tree text-white fs-4"></i>
+        </div>
+        <h3 class="mb-0 fw-bold">Path Configuration</h3>
+    </div>
+
+    <div class="card bg-dark border-secondary-subtle shadow-lg">
+        <div class="card-body p-4">
+            
+            <!-- CitizenFX Path -->
+            <div class="mb-4">
+                <label class="form-label text-secondary fw-semibold small text-uppercase mb-2">
+                    CitizenFX Path (Roaming)
+                </label>
+                <div class="input-group shadow-sm">
+                    <span class="input-group-text bg-body-tertiary border-secondary-subtle">
+                        <i class="fas fa-hdd text-primary"></i>
+                    </span>
+                    <input type="text" class="form-control bg-body-tertiary border-secondary-subtle py-2" id="pathCitizenFX" placeholder="C:\Users\...\AppData\Roaming\CitizenFX">
+                    <button class="btn btn-outline-primary px-3" type="button" onclick="browseFolder('pathCitizenFX')">
+                        <i class="fas fa-folder-open"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- FiveM Application Data Path -->
+            <div class="mb-4">
+                <label class="form-label text-secondary fw-semibold small text-uppercase mb-2">
+                    FiveM Application Data (Local)
+                </label>
+                <div class="input-group shadow-sm">
+                    <span class="input-group-text bg-body-tertiary border-secondary-subtle">
+                        <i class="fas fa-microchip text-primary"></i>
+                    </span>
+                    <input type="text" class="form-control bg-body-tertiary border-secondary-subtle py-2" id="pathFiveM" placeholder="C:\Users\...\AppData\Local\FiveM\FiveM.app">
+                    <button class="btn btn-outline-primary px-3" type="button" onclick="browseFolder('pathFiveM')">
+                        <i class="fas fa-folder-open"></i>
+                    </button>
+                </div>
+            </div>
+
+            <hr class="border-secondary-subtle my-4 opacity-25">
+
+            <!-- Footer Action -->
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="text-muted small">
+                    <i class="fas fa-circle-info me-1 text-primary"></i>
+                    This path is used for configuration and cache management.
+                </div>
+                <button class="btn btn-primary btn-sm px-5 fw-bold shadow" id="btnSavePaths" onclick="savePaths()">
+                    <i class="fas fa-save me-2"></i> SAVE
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+<script>
+    $(document).ready(function() {
+        if (window.pywebview && window.pywebview.api) {
+            loadPathsFromPython();
+        } else {
+            window.addEventListener('pywebviewready', loadPathsFromPython);
+        }
+    });
+
+    function loadPathsFromPython() {
+        pywebview.api.get_path_conf().then(paths => {
+            console.log(paths);
+            $('#pathCitizenFX').val(paths.citizen_fx || "");
+            $('#pathFiveM').val(paths.fivem_data || "");
+        });
+    }
+
+    async function browseFolder(inputId) {
+        try {
+            const currentVal = $(`#${inputId}`).val().trim();
+            const selectedFolder = await pywebview.api.select_path_folder(currentVal);
+            if(selectedFolder) $(`#${inputId}`).val(selectedFolder);
+        } catch (err) {
+            console.error("Error when selecting a folder:", err);
+        }
+    }
+
+    async function savePaths() {
+        const $btn = $('#btnSavePaths');
+        const data = {
+            citizen_fx: $('#pathCitizenFX').val().trim(),
+            fivem_data: $('#pathFiveM').val().trim()
+        };
+
+        if (!data.citizen_fx || !data.fivem_data) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Empty Data',
+                text: 'Both fields must be filled in before saving.',
+                background: '#1a1a1a',
+                color: '#fff',
+                confirmButtonColor: '#0d6efd'
+            });
+            return;
+        }
+
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i> SAVING...');
+
+        try {
+            const response = await pywebview.api.save_paths(data);
+            if (response.status === "success") {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Saved!',
+                    text: response.message,
+                    timer: 1500,
+                    showConfirmButton: false,
+                    background: '#1a1a1a',
+                    color: '#fff'
+                });
+            } else {
+                throw new Error(response.message);
+            }
+        } catch (err) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Failed',
+                text: err.message || 'A system error has occurred.',
+                background: '#1a1a1a',
+                color: '#fff'
+            });
+        } finally {
+            $btn.prop('disabled', false).html('<i class="fas fa-save me-2"></i> SAVE');
+        }
+    }
+</script>

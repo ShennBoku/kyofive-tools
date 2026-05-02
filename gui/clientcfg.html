@@ -1,0 +1,468 @@
+<style>
+    .bind-line {
+        font-family: 'Fira Code', monospace;
+        font-size: 12px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .token { color: #888; }
+    .token.resource { color: #e06c75; font-weight: bold; }
+    .token.device { color: #d19a66; }
+    .token.key.editable { 
+        color: #61afef; 
+        border-bottom: 1px dashed #61afef; 
+        cursor: pointer;
+    }
+    .token.command.editable { 
+        color: #98c379; 
+        border-bottom: 1px dashed #98c379;
+        cursor: pointer;
+    }
+
+    .locked-row {
+        background-color: rgba(0,0,0,0.05) !important;
+    }
+
+    .config-tabs-wrapper { display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.75rem; }
+    .config-card, .add-config-card { flex: 0 0 180px; height: 82px; border-width: 2px !important; cursor: pointer; padding: 1rem; }
+    .config-card.active { border-color: var(--bs-primary) !important; background-color: var(--bs-tertiary-bg); }
+    .add-config-card { border-style: dashed !important; border-color: var(--bs-border-color) !important; display: flex; align-items: center; justify-content: center; }
+    .scrollable-list { max-height: 220px; overflow-y: auto; }
+
+    .btn-toolbar-custom {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 8px 20px !important;
+        font-size: 12px !important;
+        font-weight: 700 !important;
+        height: 38px;
+        transition: all 0.2s ease;
+    }
+
+    .btn-toolbar-custom i {
+        font-size: 14px;
+        line-height: 0;
+    }
+
+    .btn-toolbar-custom:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+</style>
+
+<div id="configContentWrapper" style="display: none;">
+    <div class="container-fluid p-0">
+        <div class="config-tabs-wrapper mb-4">
+            <div class="card config-card active shadow-sm">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div><span class="d-block fw-bold text-uppercase mb-1 config-title">Config 1</span><small class="config-sub">user_notes</small></div>
+                    <i class="fas fa-check-circle text-primary"></i>
+                </div>
+            </div>
+            <div class="card add-config-card shadow-sm" onclick="addNewConfig()"><i class="fas fa-plus"></i></div>
+        </div>
+        <div class="row g-3 mb-4 align-items-center">
+            <div class="col">
+                <div class="input-group">
+                    <span class="input-group-text bg-body-tertiary border-secondary-subtle"><i class="fas fa-sticky-note text-secondary"></i></span>
+                    <input type="text" class="form-control bg-body-tertiary border-secondary-subtle py-2 config-input" placeholder="user_notes_here...">
+                </div>
+            </div>
+            <div class="col-auto d-flex gap-2">
+                <button class="btn btn-sm btn-outline-danger btn-toolbar-custom" onclick="confirmReset()">
+                    <i class="fas fa-rotate-left"></i>
+                    <span>RESET</span>
+                </button>
+                <button class="btn btn-sm btn-primary btn-toolbar-custom" onclick="saveConfig()">
+                    <i class="fas fa-save"></i>
+                    <span>SAVE</span>
+                </button>
+            </div>
+        </div>
+        <div class="card mb-4 border-secondary-subtle bg-transparent overflow-hidden">
+            <div class="card-header bg-body-tertiary border-secondary-subtle d-flex justify-content-between align-items-center py-2">
+                <span class="small fw-bold text-uppercase opacity-75 letter-spacing-1"><i class="fas fa-code me-2"></i>Custom Binding</span>
+                <button class="btn btn-link btn-sm p-0 text-primary" onclick="addBind()"><i class="fas fa-plus-square fs-5"></i></button>
+            </div>
+            <div class="list-group list-group-flush scrollable-list" id="binding-list"></div>
+        </div>
+        <div class="card border-secondary-subtle bg-transparent overflow-hidden">
+            <div class="card-header bg-body-tertiary border-secondary-subtle d-flex justify-content-between align-items-center py-2">
+                <span class="small fw-bold text-uppercase opacity-75 letter-spacing-1"><i class="fas fa-cubes me-2"></i>Resource Binding</span>
+            </div>
+            <div class="list-group list-group-flush scrollable-list" id="resource-list"></div>
+        </div>
+    </div>
+</div>
+<div id="configLockedPlaceholder" class="text-center py-5" style="display: none; margin-top: 10vh;">
+    <div class="mb-4">
+        <i class="fa-solid fa-lock text-secondary opacity-25" style="font-size: 100px;"></i>
+    </div>
+    <h4 class="text-white fw-bold">Client Configuration Locked</h4>
+    <p class="text-secondary mx-auto" style="max-width: 400px;">
+        Please configure your <b>CitizenFX</b> path in the <span class="text-primary">Path Config</span> menu first to unlock this feature.
+    </p>
+    <button class="btn btn-outline-primary rounded-pill px-4 mt-3" onclick="loadPage('path', $('.sidebar .nav-btn:first'))">
+        Go to Path Config
+    </button>
+</div>
+
+<script>
+const KEY_DESCRIPTIONS = { "BACK": "Backspace", "TAB": "Tab", "RETURN": "Enter", "PAUSE": "Pause Break", "CAPITAL": "Caps Lock", "ESCAPE": "Escape", "SPACE": "Space bar", "PAGEUP": "Page Up", "PRIOR": "Page Up", "PAGEDOWN": "Page Down", "NEXT": "Page Down", "END": "End", "HOME": "Home", "LEFT": "Left Arrow", "UP": "Up Arrow", "RIGHT": "Right Arrow", "DOWN": "Down Arrow", "SYSRQ": "Print Screen", "SNAPSHOT": "Print Screen", "INSERT": "Insert", "DELETE": "Delete", "0": "0", "1": "1", "2": "2", "3": "3", "4": "4", "5": "5", "6": "6", "7": "7", "8": "8", "9": "9", "A": "A", "B": "B", "C": "C", "D": "D", "E": "E", "F": "F", "G": "G", "H": "H", "I": "I", "J": "J", "K": "K", "L": "L", "M": "M", "N": "N", "O": "O", "P": "P", "Q": "Q", "R": "R", "S": "S", "T": "T", "U": "U", "V": "V", "W": "W", "X": "X", "Y": "Y", "Z": "Z", "LWIN": "Left OS/Windows Key", "RWIN": "Right OS/Windows Key", "APPS": "Context Menu Key", "NUMPAD0": "Numpad 0", "NUMPAD1": "Numpad 1", "NUMPAD2": "Numpad 2", "NUMPAD3": "Numpad 3", "NUMPAD4": "Numpad 4", "NUMPAD5": "Numpad 5", "NUMPAD6": "Numpad 6", "NUMPAD7": "Numpad 7", "NUMPAD8": "Numpad 8", "NUMPAD9": "Numpad 9", "MULTIPLY": "Numpad Multiply", "ADD": "Numpad Plus", "SUBTRACT": "Numpad Subtract", "DECIMAL": "Numpad Decimal", "DIVIDE": "Numpad Slash", "NUMPADEQUALS": "Numpad Equals", "NUMPADENTER": "Numpad Enter", "F1": "F1", "F2": "F2", "F3": "F3", "F4": "F4", "F5": "F5", "F6": "F6", "F7": "F7", "F8": "F8", "F9": "F9", "F10": "F10", "F11": "F11", "F12": "F12", "F13": "F13", "F14": "F14", "F15": "F15", "F16": "F16", "F17": "F17", "F18": "F18", "F19": "F19", "F20": "F20", "F21": "F21", "F22": "F22", "F23": "F23", "F24": "F24", "NUMLOCK": "Num Lock", "SCROLL": "Scroll Lock", "LSHIFT": "Left Shift", "RSHIFT": "Right Shift", "LCONTROL": "Left Control", "RCONTROL": "Right Control", "LMENU": "Left Alt", "RMENU": "Right Alt", "OEM_1": ";", "SEMICOLON": ";", "EQUALS": "=", "PLUS": "+", "COMMA": ",", "MINUS": "-", "PERIOD": ".", "SLASH": "/", "OEM_2": "/", "OEM_3": "`", "GRAVE": "`", "LBRACKET": "[", "OEM_4": "[", "OEM_5": "BACKSLASH", "RBRACKET": "]", "APOSTROPHE": "'", "OEM_7": "'", "OEM_102": "The \"angle bracket key\" or the backslash key on an RT 102-key keyboard", "RAGE_EXTRA1": "unknown", "RAGE_EXTRA2": "unknown", "RAGE_EXTRA3": "unknown", "RAGE_EXTRA4": "unknown", "CHATPAD_GREEN_SHIFT": "Xbox Chatpad Green Button", "CHATPAD_ORANGE_SHIFT": "Xbox Chatpad Orange Button" }
+
+$(document).ready(() => initClientConfig());
+
+function initClientConfig() {
+    if (window.pywebview && window.pywebview.api) {
+        checkConfigurationStatus();
+    } else {
+        window.addEventListener('pywebviewready', checkConfigurationStatus);
+    }
+}
+
+async function checkConfigurationStatus() {
+    try {
+        const paths = await pywebview.api.get_path_conf();
+        const $content = $('#configContentWrapper');
+        const $locked = $('#configLockedPlaceholder');
+
+        if (!paths.citizen_fx || paths.citizen_fx.trim() === "") {
+            $content.hide();
+            $locked.fadeIn(300);
+        } else {
+            $locked.hide();
+            $content.show();
+            
+            await loadTabs();
+            if(window.currentActiveIdentifier)
+                await fetchAndRenderConfig(window.currentActiveIdentifier);
+        }
+    } catch (err) {
+        console.error("Initialization Error:", err);
+    }
+}
+
+async function loadTabs() {
+    try {
+        const data = await pywebview.api.get_all_client_profiles();
+        const { profiles, active_profile: activeID } = data;
+
+        if (activeID) {
+            window.currentActiveIdentifier = activeID;
+            $('.config-input').val(profiles[activeID] || "");
+        }
+
+        const $wrapper = $('.config-tabs-wrapper');
+        $wrapper.find('.config-card').remove();
+
+        Object.entries(profiles).forEach(([id, notes]) => {
+            const isActive = (id === activeID);
+            const tabHtml = `
+                <div class="card config-card ${isActive ? 'active' : ''} shadow-sm" onclick="switchActiveTab('${id}', this)">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="overflow-hidden">
+                            <span class="d-block fw-bold text-uppercase mb-1 config-title small">EXTRA CONFIG</span>
+                            <small class="config-sub text-truncate d-block" style="max-width: 110px;">${notes}</small>
+                        </div>
+                        ${isActive ? '<i class="fas fa-check-circle text-primary"></i>' : ''}
+                    </div>
+                </div>`;
+            $('.add-config-card').before(tabHtml);
+        });
+    } catch (err) {
+        console.error("Load Tabs Error:", err);
+    }
+}
+
+async function fetchAndRenderConfig(identifier) {
+    const $lists = $('#binding-list, #resource-list');
+    $lists.html('<div class="p-4 text-center opacity-50"><i class="fas fa-spinner fa-spin me-2"></i>Loading Data...</div>');
+
+    try {
+        const res = await pywebview.api.get_client_config_data(identifier);
+        if (res.status === "success") {
+            window.configData = {
+                customBinds: res.customBinds || [],
+                resourceBinds: res.resourceBinds || []
+            };
+            renderAllBinds();
+        } else {
+            throw new Error(res.message);
+        }
+    } catch (err) {
+        $lists.html(`<div class="p-4 text-center text-danger small">${err.message}</div>`);
+    }
+}
+
+function renderAllBinds() {
+    if (!window.configData) return;
+
+    const $customList = $('#binding-list').empty();
+    const $resourceList = $('#resource-list').empty();
+
+    window.configData.customBinds.forEach((data, index) => {
+        $customList.append(`
+            <div class="list-group-item bg-transparent border-secondary-subtle d-flex justify-content-between align-items-center py-2">
+                <div class="bind-line">
+                    <span class="token">bind</span> 
+                    <span class="token device">${data.device}</span> 
+                    <span class="token key editable" onclick="editKey('custom', ${index})">${data.key}</span> 
+                    <span class="token command editable" onclick="editCommand(${index})">"${data.command}"</span>
+                </div>
+                <button class="btn btn-link btn-sm p-0 text-danger" onclick="deleteCustom(${index})">
+                    <i class="fas fa-trash-can"></i>
+                </button>
+            </div>`);
+    });
+
+    window.configData.resourceBinds.forEach((data, index) => {
+        const isKeyboard = data.device === 'KEYBOARD';
+        $resourceList.append(`
+            <div class="list-group-item bg-transparent border-secondary-subtle d-flex justify-content-between align-items-center py-2 ${isKeyboard ? '' : 'locked-row'}">
+                <div class="bind-line ${isKeyboard ? '' : 'opacity-50'}">
+                    <span class="token">rbind</span>
+                    <span class="token resource">${data.resource}</span>
+                    <span class="token device">${data.device}</span>
+                    <span class="token key ${isKeyboard ? 'editable' : 'text-muted'}" ${isKeyboard ? `onclick="editKey('resource', ${index})"` : ''}>${data.key}</span>
+                    <span class="token command">"${data.command}"</span>
+                </div>
+                <button class="btn btn-link btn-sm p-0 text-danger ${isKeyboard ? '' : 'disabled'}" 
+                        onclick="${isKeyboard ? `resetToNull(${index})` : ''}">
+                    <i class="fas fa-trash-can"></i>
+                </button>
+            </div>`);
+    });
+
+    updateResetButtonUI();
+}
+
+async function addBind() {
+    if (!window.configData) return;
+
+    const { value: command } = await Swal.fire({
+        title: 'ADD NEW COMMAND',
+        background: '#1a1a1a',
+        color: '#fff',
+        html: `
+            <div class="px-3">
+                <input id="swal-command-input" class="form-control bg-dark text-white border-secondary py-2 shadow-none text-center" placeholder="Enter command (e.g. do membuka handphone)" style="border-radius: 8px;">
+                <div class="small text-secondary mt-2">Contoh: <span class="text-primary">do membuka handphone</span> atau <span class="text-primary">e sit</span></div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'SELECT KEY',
+        confirmButtonColor: '#0d6efd',
+        focusConfirm: false,
+        preConfirm: () => {
+            const val = document.getElementById('swal-command-input').value.trim();
+            if (!val) {
+                Swal.showValidationMessage('The command cannot be empty!');
+                return false;
+            }
+            return val;
+        }
+    });
+    if (!command) return;
+
+    const result = await Swal.fire({
+        title: 'SELECT KEY FOR: ' + command.toUpperCase(),
+        background: '#1a1a1a',
+        color: '#fff',
+        html: `
+            <div class="text-start px-2">
+                <input type="text" id="key-search-add" class="form-control bg-dark text-white border-secondary mb-3 shadow-none" placeholder="Cari tombol atau deskripsi..." autocomplete="off" autofocus>
+                <div id="key-list-container" class="overflow-auto border border-secondary rounded" style="max-height: 300px; background: #111;">
+                    ${Object.entries(KEY_DESCRIPTIONS).map(([key, desc]) => `
+                        <div class="key-item-add p-2 border-bottom border-secondary-subtle d-flex justify-content-between align-items-center" style="cursor:pointer;" data-key-val="${key}">
+                            <span class="fw-bold text-primary">${key}</span>
+                            <small class="text-secondary small">${desc}</small>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        showConfirmButton: false,
+        didOpen: () => {
+            $(document).on('input', '#key-search-add', function() {
+                const term = $(this).val().toLowerCase();
+                $('.key-item-add').each(function() {
+                    const text = $(this).text().toLowerCase();
+                    $(this).attr('style', text.indexOf(term) > -1 ? 'display: flex !important; cursor: pointer;' : 'display: none !important;');
+                });
+            });
+
+            $(document).on('click', '.key-item-add', function() {
+                const keyVal = $(this).data('key-val');
+                $(document).off('input', '#key-search-add');
+                $(document).off('click', '.key-item-add');
+                Swal.close({ isConfirmed: true, value: keyVal });
+            });
+        },
+        willClose: () => {
+            $(document).off('input', '#key-search-add');
+            $(document).off('click', '.key-item-add');
+        }
+    });
+
+    const selectedKey = (result.value && typeof result.value === 'object') ? result.value.value : result.value;
+    if (selectedKey) {
+        window.configData.customBinds.push({ device: 'KEYBOARD', key: selectedKey, command: command });
+        renderAllBinds();
+        showToast('success', 'Successfully added a new binding.');
+    }
+}
+
+async function editKey(type, index) {
+    const arr = type === 'custom' ? window.configData.customBinds : window.configData.resourceBinds;
+    const { value: finalKey } = await Swal.fire({
+        title: 'SELECT KEY PARAMETER',
+        background: '#1a1a1a',
+        color: '#fff',
+        html: `
+            <div class="text-start px-2">
+                <input type="text" id="key-search-input" class="form-control bg-dark text-white border-secondary mb-3 shadow-none" placeholder="Search key or description..." autocomplete="off">
+                <div id="key-list-container" class="overflow-auto border border-secondary rounded" style="max-height: 300px; background: #111;">
+                    ${Object.entries(KEY_DESCRIPTIONS).map(([key, desc]) => `
+                        <div class="key-item p-2 border-bottom border-secondary-subtle d-flex justify-content-between align-items-center" style="cursor:pointer;" data-key-val="${key}">
+                            <span class="fw-bold text-primary">${key}</span>
+                            <small class="text-secondary small">${desc}</small>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        showConfirmButton: false,
+        didOpen: () => {
+            $(document).on('input', '#key-search-input', function() {
+                const term = $(this).val().toLowerCase();
+                $('.key-item').each(function() {
+                    const text = $(this).text().toLowerCase();
+                    if (text.indexOf(term) > -1)
+                        $(this).attr('style', 'display: flex !important; cursor: pointer;');
+                    else
+                        $(this).attr('style', 'display: none !important;');
+                });
+            });
+
+            $(document).on('click', '.key-item', function() {
+                const keyVal = $(this).data('key-val');
+                $(document).off('input', '#key-search-input');
+                $(document).off('click', '.key-item');
+                Swal.close(keyVal);
+            });
+        },
+        willClose: () => {
+            $(document).off('input', '#key-search-input');
+            $(document).off('click', '.key-item');
+        }
+    });
+
+    if (finalKey && typeof finalKey === 'string') {
+        if (type === 'custom')
+            window.configData.customBinds[index].key = finalKey;
+        else
+            window.configData.resourceBinds[index].key = finalKey;
+        
+        renderAllBinds();
+        showToast('success', `Key updated to ${finalKey}`);
+    }
+}
+
+async function editCommand(index) {
+    const { value: newCmd } = await Swal.fire({
+        title: 'Edit Command', input: 'text', inputValue: window.configData.customBinds[index].command,
+        background: '#1a1a1a', color: '#fff'
+    });
+    if (newCmd) { window.configData.customBinds[index].command = newCmd; renderAllBinds(); }
+}
+
+function deleteCustom(index) {
+    window.configData.customBinds.splice(index, 1);
+    renderAllBinds();
+}
+
+function resetToNull(index) {
+    window.configData.resourceBinds[index].key = "NULL";
+    renderAllBinds();
+}
+
+async function saveConfig() {
+    const id = window.currentActiveIdentifier;
+    const notes = $('.config-input').val().trim();
+    const $btn = $('button[onclick="saveConfig()"]');
+    const original = $btn.html();
+
+    $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>SAVING...');
+
+    try {
+        await pywebview.api.save_config_data_client(id, window.configData.customBinds, window.configData.resourceBinds);
+        await pywebview.api.update_notes_client(id, notes);
+        showToast('success', 'Changes Saved Successfully');
+        loadTabs();
+    } catch (err) {
+        showToast('error', 'Save Failed');
+    } finally {
+        $btn.prop('disabled', false).html(original);
+    }
+}
+
+async function addNewConfig() {
+    const res = await pywebview.api.create_and_wipe_client();
+    if (res.status === "success") {
+        await loadTabs();
+        await fetchAndRenderConfig(res.identifier);
+        showToast('success', 'New Profile Created');
+    }
+}
+
+async function switchActiveTab(id, el) {
+    if ($(el).hasClass('active')) return;
+    Swal.fire({ title: 'Switching...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#1a1a1a' });
+
+    const res = await pywebview.api.switch_active_profile_client(id);
+    if (res.status === "success") {
+        await loadTabs();
+        await fetchAndRenderConfig(id);
+        Swal.close();
+    }
+}
+
+async function confirmReset() {
+    const res = await pywebview.api.reset_client_binds(window.currentActiveIdentifier);
+    if (res.status === "success") {
+        window.configData.customBinds = [];
+        window.configData.resourceBinds = [];
+        renderAllBinds();
+        showToast('success', 'Bindings Cleared');
+    }
+}
+
+async function confirmDelete() {
+    const res = await pywebview.api.delete_profile_client(window.currentActiveIdentifier);
+    if (res.status === "success") {
+        await loadTabs();
+        if (res.next_id) await fetchAndRenderConfig(res.next_id);
+        showToast('success', 'Profile Removed');
+    }
+}
+
+function updateResetButtonUI() {
+    const isEmpty = window.configData.customBinds.length === 0 && window.configData.resourceBinds.length === 0;
+    const $btn = $('button[onclick*="confirm"]');
+    if (isEmpty && $('.config-card').length > 1) {
+        $btn.addClass('btn-danger').removeClass('btn-outline-danger').html('<i class="fas fa-trash-can me-2"></i>DELETE').attr('onclick', 'confirmDelete()');
+    } else {
+        $btn.addClass('btn-outline-danger').removeClass('btn-danger').html('<i class="fas fa-rotate-left me-2"></i>RESET').attr('onclick', 'confirmReset()');
+    }
+}
+
+function showToast(icon, title) {
+    Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#1a1a1a', color: '#fff' }).fire({ icon, title });
+}
+</script>

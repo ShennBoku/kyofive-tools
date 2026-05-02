@@ -9,7 +9,13 @@
     </head>
     <body>
         <div class="sidebar">
-            <button class="nav-btn active" onclick="loadPage('cache', this)">
+            <button class="nav-btn active" onclick="loadPage('path', this)">
+                <i class="fas fa-bridge me-3"></i> Path Config
+            </button>
+            <button class="nav-btn" onclick="loadPage('clientcfg', this)">
+                <i class="fas fa-gears me-3"></i> Client Config
+            </button>
+            <button class="nav-btn" onclick="loadPage('cache', this)">
                 <i class="fas fa-server me-3"></i> Cache Manager
             </button>
             <button class="nav-btn" onclick="loadPage('kclicker', this)">
@@ -30,7 +36,7 @@
 
         <script>
             $(document).ready(function() {
-                loadPage('cache', $('.nav-btn.active'));
+                loadPage('path', $('.nav-btn.active'));
             });
 
             function loadPage(pageName, btn) {

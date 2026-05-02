@@ -17,19 +17,33 @@ A lightweight, efficient tool designed for FiveM players and developers to manag
 
 ## 🌟 Features
 
-KyoFive Tools comes with several key features that make managing your FiveM data easier:
+KyoFive Tools provides a comprehensive suite of utilities designed for FiveM players and developers:
 
-- 🌐 **Cache Manager**:
-   - **Smart Search**: Search for specific server data by simply entering *Server Code*.
-   - **Profile Switching**: Instantly swap cache folders between servers without re-downloading assets (GB).
-   - **Local Detection**: Auto detect local server (localhost:30120) for *development* purposes.
-   - **Real-time Stats**: Calculate cache folder size (GB/MB) directly in UI.
-- ⌨️ **Keyboard Clicker (Auto Keyboard Spammer)**:
-   - **Hold-Time Logic (30ms)**: Optimized keystroke simulation specifically for the FiveM engine to avoid missing inputs.
-   - **Always-on-Top Status**: Floating window (Status Indicator) with *Glassmorphism* effect to monitor Running/Standby status while in game.
-   - **Smart Recording**: Instant hotkey recording feature for *Trigger* and *Target Key* without the need for manual typing.
-   - **Conflict Prevention**: Prevent the use of the same key between trigger and spam target to avoid *loop error*.
-- 📦 **Hybrid Storage**: Using the organized `kyofive-storage` folder system.
+- 📂 **Smart Path Configuration**:
+   - **Auto-Detection**: Automatically finds your CitizenFX (Roaming) and FiveM Application Data (Local) folders.
+   - **Validation Logic**: Ensures your paths are valid by verifying essential files like `fivem.cfg` and `CitizenFX.ini`.
+
+- 🎮 **Client Config Manager (Multi-Profile Binds)**:
+   - **Profile Switcher**: Create multiple configuration profiles without affecting your core game settings (Graphics/Audio).
+   - **Smart Sanitization**: Automatically wipes existing binds when creating new profiles for a clean slate.
+   - **Binding Editor**: Manage `bind` and `rbind` commands with a searchable list of valid FiveM key parameters.
+   - **Zero-Conflict Logic**: Injects your custom binds safely after the `unbindall` command in your config file.
+
+- 🌐 **Advanced Cache Manager**:
+   - **Server Search**: Fetch server details instantly using *Server Codes* (e.g., `k4y10g`).
+   - **Hot-Swap Profiles**: Swap cache folders (`server-cache-priv`) between different servers to save GBs of bandwidth.
+   - **Local Dev Support**: Auto-detects local servers (127.0.0.1:30120) with real-time player counts and game build info.
+   - **Storage Stats**: Real-time calculation of cache sizes (GB/MB) directly in the UI.
+
+- ⌨️ **Keyboard Clicker (Optimized Spammer)**:
+   - **FiveM Engine Ready**: Uses 30ms hold-time logic to ensure the game engine registers every keystroke.
+   - **Glassmorphism Overlay**: A sleek, floating status indicator that stays on top while you are in-game.
+   - **Smart Recording**: Record triggers and spam keys instantly without manual typing.
+   - **Loop Prevention**: Built-in logic to prevent key conflicts between triggers and targets.
+
+- 📦 **Professional Storage Structure**:
+   - **Isolated Data**: All configurations are stored securely in `%LOCALAPPDATA%/Kyogo Development/kyofive-tools/`.
+   - **Safe Backups**: Keeps your original `fivem.cfg` safe in a dedicated `temp/` directory during profile swaps.
 
 ---
 

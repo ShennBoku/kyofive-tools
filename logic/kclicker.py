@@ -1,10 +1,9 @@
 import threading, time
-from pynput.keyboard import Controller, Listener, Key
+from pynput.keyboard import Controller, Listener
 from logic.database import DatabaseManager
 
 class KeyClickerLogic:
-    def __init__(self, api):
-        self.api = api
+    def __init__(self):
         self.keyboard = Controller()
         self.db = DatabaseManager()
 

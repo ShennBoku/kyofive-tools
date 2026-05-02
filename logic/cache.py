@@ -1,131 +1,136 @@
-import os, re, json, shutil, requests
+import os, re, shutil, requests
 from datetime import datetime
 from logic.database import DatabaseManager
 
 class CacheManager:
-    def __init__(self):
+    def __init__(self, api):
         self.db = DatabaseManager()
+        self.api = api
+        self.temp = {}
+        self.local = {}
+        self._refresh_paths()
 
-        self.fivem_data = os.path.join(self.db.appdata, "FiveM", "FiveM.app", "data")
-        self.active_cache = os.path.join(self.fivem_data, "server-cache-priv")
-        self.storage_dir = self.db.storage_dir
+    def _refresh_paths(self):
+        paths = self.db.get_config().get("paths", {})
+        self.fivem_data = paths.get("fivem_data", "")
+        
+        if self.fivem_data:
+            data_root = os.path.join(self.fivem_data, "data")
+            self.active_cache = os.path.join(data_root, "server-cache-priv")
+            self.cached_dir = os.path.join(data_root, "kyofive-storage")
+        else:
+            self.active_cache = self.cached_dir = ""
 
+    def _get_now(self):
+        return datetime.now().strftime("%Y-%m-%d %H:%M")
 
-    # --- DATABASE ---
     def update_server_data(self, name, code, ip, max_clients, build):
         db = self.db.get_cached()
-        db["servers"][code] = {
-            "name": name,
-            "ip": ip,
-            "maxClients": max_clients,
-            "gameBuild": build,
-            "lastConnect": datetime.now().strftime("%Y-%m-%d %H:%M")
-        }
+        db["servers"][code] = { "name": name, "ip": ip, "maxClients": max_clients, "gameBuild": build, "lastConnect": self._get_now() }
         db["active_profile"] = code
         self.db.save_cached(db)
 
-    def switch_profile(self, name, code, ip, max_clients, build="1604"):
+    def switch_profile(self, name, code, ip, max_clients, build="1604", pools=""):
+        self._refresh_paths()
+        if not self.fivem_data:
+            return False, "FiveM Application Data path is not configured."
+
         db = self.db.get_cached()
         current_active = db.get("active_profile")
 
-        if current_active is None:
-            db["active_profile"] = code
-            db["servers"][code] = {
-                "name": name,
-                "ip": ip,
-                "maxClients": max_clients,
-                "gameBuild": build,
-                "lastConnect": datetime.now().strftime("%Y-%m-%d %H:%M")
-            }
-            self.db.save_cached(db)            
-            return True, f"First profile set: {name}"
-
         if current_active == code:
-            return True, "The server is active."
+            return True, "This server profile is already active."
 
         try:
-            if os.path.exists(self.active_cache):
-                save_path = os.path.join(self.storage_dir, f"cache_{current_active}")
+            os.makedirs(self.cached_dir, exist_ok=True)
+
+            if current_active and os.path.exists(self.active_cache):
+                save_path = os.path.join(self.cached_dir, f"cache_{current_active}")
                 if os.path.exists(save_path): shutil.rmtree(save_path)
                 shutil.move(self.active_cache, save_path)
 
-            load_path = os.path.join(self.storage_dir, f"cache_{code}")
+            load_path = os.path.join(self.cached_dir, f"cache_{code}")
             if os.path.exists(load_path):
                 shutil.move(load_path, self.active_cache)
             else:
-                os.makedirs(self.active_cache)
+                os.makedirs(self.active_cache, exist_ok=True)
 
             db["active_profile"] = code
             if code != "localpriv":
-                db["servers"][code] = {
-                    "name": name,
-                    "ip": ip,
-                    "maxClients": max_clients,
-                    "gameBuild": build,
-                    "lastConnect": datetime.now().strftime("%Y-%m-%d %H:%M")
+                db["servers"][code] = { "name": name, "ip": ip, "maxClients": max_clients, "gameBuild": build, "poolSizes": pools, "lastConnect": self._get_now() }
+
+            ini_path = os.path.join(self.fivem_data, "CitizenFX.ini")
+            if os.path.exists(ini_path):
+                with open(ini_path, 'r') as f:
+                    lines = f.readlines()
+
+                new_lines = []
+                keys_to_update = {
+                    "SavedBuildNumber": build,
+                    "PoolSizesIncrease": pools
                 }
+                
+                found_keys = set()
+                for line in lines:
+                    updated = False
+                    for key, value in keys_to_update.items():
+                        if line.strip().startswith(key + "="):
+                            new_lines.append(f"{key}={value}\n")
+                            found_keys.add(key)
+                            updated = True
+                            break
+                    if not updated:
+                        new_lines.append(line)
+
+                for key, value in keys_to_update.items():
+                    if key not in found_keys and value:
+                        new_lines.append(f"{key}={value}\n")
+
+                with open(ini_path, 'w') as f:
+                    f.writelines(new_lines)
+            
             self.db.save_cached(db)
-
-            return True, f"Switched to {name} (Build {build})"
-        except Exception as e:
-            return False, f"Gagal: {str(e)}"
+            return True, f"Successfully switched to {name}"
         
-
-    # --- CHECKER ---
-    def is_fivem_running(self):
-        try:
-            # Menjalankan perintah tasklist untuk mencari FiveM
-            output = os.popen('tasklist /FI "IMAGENAME eq FiveM.exe"').read()
-            return "FiveM.exe" in output
-        except:
-            return False
+        except Exception as e:
+            return False, f"Switch failed: {str(e)}"
 
     def get_folder_size(self, code):
         db = self.db.get_cached()
-        if db.get("active_profile") == code:
-            path = self.active_cache
-        else:
-            path = os.path.join(self.storage_dir, f"cache_{code}")
+        path = self.active_cache if db.get("active_profile") == code else os.path.join(self.cached_dir, f"cache_{code}")
 
-        if not os.path.exists(path): return "0 B"
+        if not path or not os.path.exists(path): return "0 B"
         try:
             total_size = sum(f.stat().st_size for f in os.scandir(path) if f.is_file())
-            gb = total_size / (1024**3)
-            return f"{gb:.2f} GB" if gb >= 0.1 else f"{total_size / (1024**2):.1f} MB"
+            if total_size >= 1024**3:
+                return f"{total_size / (1024**3):.2f} GB"
+            return f"{total_size / (1024**2):.1f} MB"
         except:
             return "Checking..."
         
     def check_local_server(self):
         try:
-            response = requests.get("http://127.0.0.1:30120/info.json", timeout=0.5)
-            if response.status_code == 200:
-                data = response.json()
+            res = requests.get("http://127.0.0.1:30120/info.json", timeout=0.5)
+            if res.status_code == 200:
+                data = res.json()
+                p_res = requests.get("http://127.0.0.1:30120/players.json", timeout=0.5)
+                count = len(p_res.json()) if p_res.status_code == 200 else 0
                 
-                players_res = requests.get("http://127.0.0.1:30120/players.json", timeout=0.5)
-                player_count = len(players_res.json()) if players_res.status_code == 200 else 0
-                
-                raw_name = data.get('vars', {}).get('sv_projectName', 'LOCAL DEVELOPMENT SERVER')
+                raw_name = data.get('vars', {}).get('sv_projectName', 'LOCAL SERVER')
                 clean_name = re.sub(r"\^[0-9]", "", raw_name)[:50]
-                max_clients = data.get('vars', {}).get('sv_maxClients', '48')
-                gameBuild = data.get('vars', {}).get('sv_enforceGameBuild', '1604')
+                build = data.get('vars', {}).get('sv_enforceGameBuild', '1604')
+                pools = data.get('vars', {}).get('sv_poolSizesIncrease', '')
+                max = data['vars'].get('sv_maxClients', '48')
 
                 db = self.db.get_cached()
-                db["local_settings"] = { "name": clean_name, "gameBuild": gameBuild, "ip": "127.0.0.1:30120" }
+                db["local_settings"] = { "name": clean_name, "gameBuild": build, "poolSizes": pools, "ip": "127.0.0.1:30120" }
                 self.db.save_cached(db)
 
-                return {
-                    "active": True,
-                    "name": f"{clean_name}",
-                    "ip": "127.0.0.1:30120",
-                    "code": "localpriv",
-                    "players": f"{player_count}/{max_clients}",
-                    "gameBuild": gameBuild,
-                    "size": self.get_folder_size("localpriv")
-                }
+                self.local = { "active": True, "name": clean_name, "ip": "127.0.0.1:30120", "code": "localpriv", "players": f"{count}/{max}", "max": max, "gameBuild": build, "poolSizes": pools, "size": self.get_folder_size("localpriv") }
         except:
-            pass
+            self.local = { "active": False }
 
-        return {"active": False}
+        return self.local
         
     def fetch_single_server(self, code):
         url = f"https://servers-frontend.fivem.net/api/servers/single/{code}"
@@ -133,77 +138,77 @@ class CacheManager:
         try:
             response = requests.get(url, headers=headers, timeout=10)
             if response.status_code == 200:
-                return response.json()
+                resp = response.json()
+
+                self.temp = {
+                    "code": resp['EndPoint'],
+                    "name": re.sub(r"\^[0-9]", "", resp['Data'].get('hostname', 'NOT DETECTED'))[:50],
+                    "ip": resp['Data'].get('connectEndPoints', ['0.0.0.0'])[0],
+                    "max": resp['Data']['sv_maxclients'],
+                    "gameBuild": resp['Data']['vars'].get('sv_enforceGameBuild', '1604'),
+                    "poolSizes": resp['Data']['vars'].get('sv_poolSizesIncrease', '')
+                }
+
+                return resp
             else:
                 print(f"Server not found. Status code: {response.status_code}")
         except Exception as e:
             print(f"API Error: {e}")
         return {"error": True}
-    
 
-    # --- ACTION ---
     def get_library_data(self):
         db = self.db.get_cached()
-        library = []
-        is_running = self.is_fivem_running()
-
-        for code, info in db["servers"].items():
-            # Clone info agar tidak merusak DB asli saat ditambah field 'size'
-            item = info.copy()
-            item["code"] = code
-            item["size"] = self.get_folder_size(code)
-            library.append(item)
+        library = [{**info, "code": code, "size": self.get_folder_size(code)} for code, info in db.get("servers", {}).items()]
         
-        # Urutkan berdasarkan koneksi terakhir (terbaru di atas)
-        library.sort(key=lambda x: x['lastConnect'], reverse=True)
+        library.sort(key=lambda x: x.get('lastConnect', ''), reverse=True)
         return {
             "library": library,
             "active_profile": db.get("active_profile"),
-            "fivem_running": is_running,
+            "fivem_running": self.api._is_fivem_running(),
             "local_server": self.check_local_server()
         }
     
     def reset_cache(self, code):
-        if self.is_fivem_running():
-            return {"status": "error", "message": "FiveM is still open! Close the game first."}
+        if self.api._is_fivem_running():
+            return {"status": "error", "message": "FiveM is still running! Please close the game first."}
+        
+        self._refresh_paths()
+        if not self.fivem_data: return {"status": "error", "message": "FiveM path is not configured."}
 
         db = self.db.get_cached()
-        if db.get("active_profile") == code:
-            path = self.active_cache
-        else:
-            path = os.path.join(self.storage_dir, f"cache_{code}")
+        path = self.active_cache if db.get("active_profile") == code else os.path.join(self.cached_dir, f"cache_{code}")
 
         try:
             if os.path.exists(path):
                 shutil.rmtree(path)                
-                if db.get("active_profile") == code:
-                    os.makedirs(self.active_cache)
-                    
-                return {"status": "success", "message": f"{code} cache cleared successfully."}
-            else:
-                return {"status": "error", "message": "Cache folder not found."}
+                if db.get("active_profile") == code: os.makedirs(self.active_cache, exist_ok=True)
+                return {"status": "success", "message": f"Cache for {code} has been cleared."}
+            return {"status": "error", "message": "Cache folder not found."}
         except Exception as e:
             return {"status": "error", "message": str(e)}
         
     def remove_from_list(self, code):
-        if self.is_fivem_running():
-            return {"status": "error", "message": "FiveM is still open! Close the game first."}
+        """Menghapus server dari library dan menghapus folder profilnya di storage Kyogo"""
+        if self.api._is_fivem_running(): 
+            return {"status": "error", "message": "FiveM is still running! Please close the game first."}
         
         db = self.db.get_cached()
         if db.get("active_profile") == code:
-            return {"status": "error", "message": "Cannot delete active server."}
+            return {"status": "error", "message": "Cannot remove the currently active profile."}
         
-        path = os.path.join(self.storage_dir, f"cache_{code}")
         try:
-            if os.path.exists(path):
-                shutil.rmtree(path)
-
-                if code in db["servers"]:
-                    del db["servers"][code]
-                    self.db.save_cached(db)
-
-                return {"status": "success", "message": f"The {code} cache was successfully removed from the library."}
+            self._refresh_paths() 
+            profile_path = os.path.join(self.cached_dir, f"cache_{code}")
+            
+            if os.path.exists(profile_path):
+                shutil.rmtree(profile_path)
+            
+            if "servers" in db and code in db["servers"]:
+                del db["servers"][code]
+                self.db.save_cached(db)
+                return {"status": "success", "message": f"Server {code} successfully removed."}
             else:
-                return {"status": "error", "message": "Cache folder not found."}
+                return {"status": "error", "message": "Server code not found in your library."}
+                
         except Exception as e:
-            return {"status": "error", "message": str(e)}
+            return {"status": "error", "message": f"System Error: {str(e)}"}

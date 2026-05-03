@@ -247,7 +247,7 @@ def start_app():
         background_color='#121212'
     )
 
-    webview.start(debug=True, gui='edge')
+    webview.start(debug=False, gui='edge')
 
 if __name__ == "__main__":
     start_app()

@@ -15,7 +15,7 @@ class KyoApi:
         self.db = DatabaseManager()
         self.config = self.db.get_config()
 
-        self.client_cfg = ClientConfigManager()
+        self.client_cfg = ClientConfigManager(self)
         self.cache_mgr = CacheManager(self)
 
         self.keyclicker = KeyClickerLogic()
@@ -247,7 +247,7 @@ def start_app():
         background_color='#121212'
     )
 
-    webview.start(debug=False, gui='edge')
+    webview.start(debug=True, gui='edge')
 
 if __name__ == "__main__":
     start_app()

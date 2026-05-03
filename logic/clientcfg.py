@@ -6,9 +6,10 @@ import shutil
 from logic.database import DatabaseManager
 
 class ClientConfigManager:
-    def __init__(self):
+    def __init__(self, api):
         self.db = DatabaseManager()
-        self.db_client_cfg = os.path.join(self.db.storage_dir, "client-config.json")
+        self.api = api
+        self.cfg_file = os.path.join(self.db.storage_dir, "client-config.json")
         self._refresh_paths()
         self._ensure_db()
 
@@ -18,7 +19,7 @@ class ClientConfigManager:
         self.temp_dir = os.path.join(self.citizen_fx, "temp") if self.citizen_fx else ""
 
     def _ensure_db(self):
-        if not os.path.exists(self.db_client_cfg):
+        if not os.path.exists(self.cfg_file):
             initial_id = f"cfg_{uuid.uuid4().hex[:8]}"
             self._save_client_db({
                 "active_profile": initial_id,
@@ -29,20 +30,23 @@ class ClientConfigManager:
 
     def _load_client_db(self):
         try:
-            if not os.path.exists(self.db_client_cfg): return {"active_profile": None, "profiles": {}}
-            with open(self.db_client_cfg, "r") as f:
+            if not os.path.exists(self.cfg_file): return {"active_profile": None, "profiles": {}}
+            with open(self.cfg_file, "r") as f:
                 return json.load(f)
         except:
             return {"active_profile": None, "profiles": {}}
 
     def _save_client_db(self, data):
         try:
-            with open(self.db_client_cfg, "w") as f:
+            with open(self.cfg_file, "w") as f:
                 json.dump(data, f, indent=4)
         except Exception as e:
             print(f"Error saving client-config database: {e}")
 
     def create_and_wipe(self):
+        if self.api._is_fivem_running():
+            return {"status": "error", "message": "FiveM is still running! Please close the game first."}
+
         self._refresh_paths()
         main_cfg = os.path.join(self.citizen_fx, "fivem.cfg")
         
@@ -75,6 +79,9 @@ class ClientConfigManager:
             return {"status": "error", "message": f"Failed to swap config: {str(e)}"}
 
     def switch_active_profile(self, target_id):
+        if self.api._is_fivem_running():
+            return {"status": "error", "message": "FiveM is still running! Please close the game first."}
+
         self._refresh_paths()
         db = self._load_client_db()
         current_id = db.get("active_profile")
@@ -139,6 +146,9 @@ class ClientConfigManager:
             return {"status": "error", "message": f"Read Error: {str(e)}"}
 
     def save_config_data(self, identifier, custom_binds, resource_binds):
+        if self.api._is_fivem_running():
+            return {"status": "error", "message": "FiveM is still running! Please close the game first."}
+
         self._refresh_paths()
         db = self._load_client_db()
         
@@ -186,6 +196,9 @@ class ClientConfigManager:
         return {"status": "error", "message": "Profile not found."}
     
     def reset_all_binds(self, identifier):
+        if self.api._is_fivem_running():
+            return {"status": "error", "message": "FiveM is still running! Please close the game first."}
+
         self._refresh_paths()
         db = self._load_client_db()
         
@@ -210,6 +223,9 @@ class ClientConfigManager:
             return {"status": "error", "message": str(e)}
         
     def delete_profile(self, identifier):
+        if self.api._is_fivem_running():
+            return {"status": "error", "message": "FiveM is still running! Please close the game first."}
+
         self._refresh_paths()
         db = self._load_client_db()
         main_cfg = os.path.join(self.citizen_fx, "fivem.cfg")

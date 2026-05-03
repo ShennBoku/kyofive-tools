@@ -32,6 +32,7 @@ KyoFive Tools provides a comprehensive suite of utilities designed for FiveM pla
 - 🌐 **Advanced Cache Manager**:
    - **Server Search**: Fetch server details instantly using *Server Codes* (e.g., `k4y10g`).
    - **Hot-Swap Profiles**: Swap cache folders (`server-cache-priv`) between different servers to save GBs of bandwidth.
+   - **Flexible Connection**: Toggle between Connect IP and Connect Code via the dropdown menu on the play button.
    - **Local Dev Support**: Auto-detects local servers (127.0.0.1:30120) with real-time player counts and game build info.
    - **Storage Stats**: Real-time calculation of cache sizes (GB/MB) directly in the UI.
 

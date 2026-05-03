@@ -140,7 +140,7 @@ class KyoApi:
     def remove_from_list(self, code):
         return self.cache_mgr.remove_from_list(code)
     
-    def connect_server(self, code, isNew):
+    def connect_server(self, code, mode, isNew):
         if self._is_fivem_running():
             return {"status": "error", "message": "FiveM is still open! Please close the game first."}
 
@@ -149,6 +149,7 @@ class KyoApi:
                 if not self.cache_mgr.local.get("active", False):
                     return {"status": "error", "message": "Local Server is not active."}
 
+                mode = "ip"
                 name = self.cache_mgr.local['name']
                 ip = self.cache_mgr.local['ip']
                 build = self.cache_mgr.local['gameBuild']
@@ -176,7 +177,7 @@ class KyoApi:
         success, msg = self.cache_mgr.switch_profile(name, code, ip, max_clients, build, pools)
         if success:
             try:
-                webbrowser.open(f"fivem://connect/{code == "localpriv" and ip or code}")
+                webbrowser.open(f"fivem://connect/{mode == "ip" and ip or code}")
                 return {"status": "success", "message": "Launching..."}
             except Exception as e:
                 return {"status": "error", "message": f"Failed to Open FiveM: {e}"}

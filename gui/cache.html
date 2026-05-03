@@ -154,9 +154,23 @@
                                 <button class="btn btn-sm btn-outline-danger border-0 px-3" ${disableAttr} onclick="confirmReset('${s.code}')">
                                     <i class="fa-solid fa-trash-can"></i>
                                 </button>
-                                <button class="btn btn-sm btn-outline-success border-0 px-3" ${disableAttr} onclick="handleLibraryPlay('${s.code}')">
-                                    <i class="fa-solid fa-play"></i>
-                                </button>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-sm btn-outline-success border-0 px-3" data-bs-toggle="dropdown" aria-expanded="false" ${disableAttr}>
+                                        <i class="fa-solid fa-play"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end bg-dark border-secondary shadow">
+                                        <li>
+                                            <a class="dropdown-item text-white py-2" href="#" onclick="handleLibraryPlay('${s.code}')">
+                                                <i class="fa-solid fa-network-wired me-2 small"></i> Connect IP
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item text-white py-2" href="#" onclick="handleLibraryPlay('${s.code}')">
+                                                <i class="fa-solid fa-key me-2 small"></i> Connect Code
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     `);
@@ -269,7 +283,7 @@
         });
     }
 
-    function handleLibraryPlay(code) {
+    function handleLibraryPlay(code, mode = 'code') {
         Swal.fire({
             title: 'Processing...',
             text: 'Changing the cache folder and setting up FiveM',
@@ -279,7 +293,7 @@
             didOpen: () => { Swal.showLoading(); }
         });
 
-        pywebview.api.connect_server(code, false).then(res => {
+        pywebview.api.connect_server(code, mode, false).then(res => {
             if(res.status === 'success') {
                 createSwal(true, 'Success!', 'Cache has been switched, running FiveM...');
                 loadLibrary();
@@ -299,7 +313,7 @@
             didOpen: () => { Swal.showLoading(); }
         });
 
-        pywebview.api.connect_server(code, true).then(res => {
+        pywebview.api.connect_server(code, 'code', true).then(res => {
             if(res.status === 'success') {
                 createSwal(true, 'Success!', res.message);
                 loadLibrary();

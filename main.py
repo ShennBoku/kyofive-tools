@@ -14,6 +14,7 @@ class KyoApi:
     def __init__(self):
         self.db = DatabaseManager()
         self.config = self.db.get_config()
+        self.is_exe = getattr(sys, 'frozen', False)
 
         self.client_cfg = ClientConfigManager(self)
         self.cache_mgr = CacheManager(self)
@@ -142,22 +143,23 @@ class KyoApi:
     
     def connect_server(self, code, mode, isNew):
         if self._is_fivem_running():
-            return {"status": "error", "message": "FiveM is still open! Please close the game first."}
+            return {"status": "error", "message": "FiveM is still open, please close the game first."}
+        if self.is_exe and (mode == "ip" or mode == "code"):
+            return {"status": "error", "message": "Direct connection is disabled in EXE version."}
 
         if isNew:
             if code == "localpriv":
                 if not self.cache_mgr.local.get("active", False):
                     return {"status": "error", "message": "Local Server is not active."}
-
-                mode = "ip"
+                
                 name = self.cache_mgr.local['name']
                 ip = self.cache_mgr.local['ip']
                 build = self.cache_mgr.local['gameBuild']
-                pools = temp_data['poolSizes']
+                pools = self.cache_mgr.local.get('poolSizes', {}) # Gunakan get untuk keamanan
                 max_clients = self.cache_mgr.local['max']
             else:
                 temp_data = getattr(self.cache_mgr, 'temp', {})
-                if code != temp_data['code']:
+                if code != temp_data.get('code'):
                     return { "status": "error", "message": "Code mismatch." }
 
                 name = temp_data['name']
@@ -168,6 +170,9 @@ class KyoApi:
         else:
             db = self.db.get_cached()
             sInfo = db["servers"].get(code)
+            if not sInfo:
+                return {"status": "error", "message": "Server not found in library."}
+                
             ip = sInfo['ip']
             name = sInfo['name']
             build = sInfo['gameBuild']
@@ -176,13 +181,17 @@ class KyoApi:
 
         success, msg = self.cache_mgr.switch_profile(name, code, ip, max_clients, build, pools)
         if success:
-            try:
-                webbrowser.open(f"fivem://connect/{mode == "ip" and ip or code}")
-                return {"status": "success", "message": "Launching..."}
-            except Exception as e:
-                return {"status": "error", "message": f"Failed to Open FiveM: {e}"}
+            if mode in ["ip", "code"]:
+                try:
+                    target = ip if mode == "ip" else code
+                    webbrowser.open(f"fivem://connect/{target}")
+                    return {"status": "success", "message": f"Cache switched & Launching to {name}..."}
+                except Exception as e:
+                    return {"status": "error", "message": f"Cache ready, but failed to open FiveM: {e}"}
+
+            return {"status": "success", "message": f"Successfully prepared cache for {name}."}
         else:
-            return {"status": "error", "message": msg}        
+            return {"status": "error", "message": msg}
         
 
     # Keyboard Clicker

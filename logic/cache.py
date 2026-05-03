@@ -139,17 +139,21 @@ class CacheManager:
             response = requests.get(url, headers=headers, timeout=10)
             if response.status_code == 200:
                 resp = response.json()
+                code = resp['EndPoint']
 
                 self.temp = {
-                    "code": resp['EndPoint'],
+                    "code": code,
                     "name": re.sub(r"\^[0-9]", "", resp['Data'].get('hostname', 'NOT DETECTED'))[:50],
                     "ip": resp['Data'].get('connectEndPoints', ['0.0.0.0'])[0],
                     "max": resp['Data']['sv_maxclients'],
+                    "icon": f"https://frontend.cfx-services.net/api/servers/icon/{code}/{resp['Data']['iconVersion']}.png",
+                    "clients": resp['Data']['clients'],
                     "gameBuild": resp['Data']['vars'].get('sv_enforceGameBuild', '1604'),
-                    "poolSizes": resp['Data']['vars'].get('sv_poolSizesIncrease', '')
+                    "poolSizes": resp['Data']['vars'].get('sv_poolSizesIncrease', ''),
+                    "exe_running": self.api.is_exe
                 }
 
-                return resp
+                return self.temp
             else:
                 print(f"Server not found. Status code: {response.status_code}")
         except Exception as e:
@@ -165,7 +169,8 @@ class CacheManager:
             "library": library,
             "active_profile": db.get("active_profile"),
             "fivem_running": self.api._is_fivem_running(),
-            "local_server": self.check_local_server()
+            "local_server": self.check_local_server(),
+            "exe_running": self.api.is_exe
         }
     
     def reset_cache(self, code):
